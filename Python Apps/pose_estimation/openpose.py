@@ -12,6 +12,7 @@ from torch2trt import TRTModule
 import torchvision.transforms as transforms
 from .draw_objects import DrawObjects
 from trt_pose.parse_objects import ParseObjects
+from .human_detection import HumanDetection
 
 
 class SkeletonSegment(object):
@@ -157,6 +158,8 @@ class OpenPose():
             
             self._parse_objects = ParseObjects(self._topology['topology'])
             self._draw_objects = DrawObjects(self._topology)
+
+            self._human_detector = HumanDetection()
             
     def _preprocess(self,  image):
         global device
@@ -176,8 +179,19 @@ class OpenPose():
         t1 = time.time()
 
         print(f"OpenPose FPS={50.0 / (t1 - t0)}")
-        
-    def _construct_skeletons(self, object_counts, objects, normalized_peaks):
+
+    def _in_detected_humans(self, x, y, detected_humans):
+        for entry in detected_humans:
+            x1 = entry[0]
+            y1 = entry[1]
+            x2 = entry[2]
+            y2 = entry[3]
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return True
+
+        return False
+
+    def _construct_skeletons(self, object_counts, objects, normalized_peaks, detected_humans):
         topology = self._topology['topology']
         topology_segment_names = self._topology['segment_names']
         topology_joint_names = self._topology['joint_names']
@@ -198,8 +212,11 @@ class OpenPose():
                     peak = normalized_peaks[0][j][k]
                     x = float(peak[1])
                     y = float(peak[0])
-                    joint = SkeletonJoint(x,  y,  topology_joint_names[j])
-                    skeleton.add_joint(joint)
+                    if self._in_detected_humans(x, y, detected_humans):
+                        joint = SkeletonJoint(x,  y,  topology_joint_names[j])
+                        skeleton.add_joint(joint)
+                    else:
+                        skeleton.add_joint(None)
                 else:
                     skeleton.add_joint(None)
                     
@@ -213,10 +230,12 @@ class OpenPose():
                     y0 = float(peak0[0])
                     x1 = float(peak1[1])
                     y1 = float(peak1[0])
-                    color = topology_segment_colours[k]
-                    
-                    segment = SkeletonSegment(x0,  y0,  x1,  y1,  c_a,  c_b,  color,  topology_segment_names[k])
-                    skeleton.add_segment(segment)
+                    if self._in_detected_humans(x0, y0, detected_humans) and self._in_detected_humans(x1, y1, detected_humans):
+                        color = topology_segment_colours[k]
+                        segment = SkeletonSegment(x0,  y0,  x1,  y1,  c_a,  c_b,  color,  topology_segment_names[k])
+                        skeleton.add_segment(segment)
+                    else:
+                        skeleton.add_segment(None)
                 else:
                     skeleton.add_segment(None)
         
@@ -236,7 +255,9 @@ class OpenPose():
         cmap, paf = cmap.detach().cpu(), paf.detach().cpu()
         counts, objects, peaks = self._parse_objects(cmap, paf)#, cmap_threshold=0.15, link_threshold=0.15)
                 
-        skeletons = self._construct_skeletons(counts, objects, peaks)
+        detected_humans = self._human_detector.detect(image)
+        skeletons = self._construct_skeletons(counts, objects, peaks, detected_humans)
+
         annot_image = None
 
         if return_annotated_image:
