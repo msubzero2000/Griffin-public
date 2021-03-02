@@ -79,7 +79,6 @@ If you have CSI Cameras on your Jetson AGX Xavier, no special steps here.
 As my case, I only have a USB Camera, so some code changes needed.
 
 
-```
 
 ## Run!
 
