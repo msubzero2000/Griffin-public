@@ -9,6 +9,8 @@ Read the full blog here
 https://towardsdatascience.com/making-my-toddlers-dream-of-flying-come-true-with-ai-tech-82881eac01b8
 
 Setup guides
+
 [Build & Run Game Engine](https://github.com/zhaoyongke/Griffin-public/blob/master/Game%20Engine/README.md)
+
 [Deploy AI models](https://github.com/zhaoyongke/Griffin-public/blob/master/Python%20Apps/README.md)
 
