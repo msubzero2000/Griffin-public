@@ -2,6 +2,7 @@ from socket_sender.socket_sender import  SocketSender
 from pose_estimation.openpose import OpenPose
 from video_feed.video_offline_reader import VideoOfflineReader
 from video_feed.video_csi_reader import VideoCSIReader
+from video_feed.video_usb_reader import VideoUSBReader
 from motion.motion_controller import MotionController
 
 import cv2
@@ -12,7 +13,7 @@ socket_sender = SocketSender()
 motion = MotionController()
 
 pose_estimator = OpenPose('models')
-video_reader = VideoCSIReader()
+video_reader = VideoUSBReader()
 num_frames = 0
 sw = Stopwatch()
 show_preview = True
